@@ -137,7 +137,13 @@ app.post('/api/guests', needAdmin, (req, res) => {
   const name = String((req.body || {}).name || '').trim().replace(/\s+/g, ' ');
   if (!name || name.length > 60) return res.status(400).json({ error: 'Enter a name (up to 60 characters).' });
   const g = { id: crypto.randomUUID(), name, token: crypto.randomBytes(9).toString('base64url'), created: new Date().toISOString(), addedBy: req.admin, opens: 0 };
-  db.guests.push(g); save();
+  db.guests.push(g);
+  try { save(); }
+  catch (e) {
+    db.guests.pop();
+    console.error('Could not save guest:', e);
+    return res.status(500).json({ error: 'Could not save the guest. Check the server logs and database file permissions.' });
+  }
   res.status(201).json(publicGuest(g));
 });
 app.delete('/api/guests/:id', needAdmin, (req, res) => {
@@ -170,7 +176,9 @@ const renderInvite = name => {
 };
 
 app.get('/admin', (req, res) => res.set('Cache-Control', 'no-store').sendFile(path.join(__dirname, 'public', 'admin.html')));
-app.get('/', (req, res) => res.set('Cache-Control', 'no-store').type('html').send(renderInvite('Friend')));
+app.get('/', (req, res) => res.status(404).set('Cache-Control', 'no-store').type('html').send(
+  '<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Not found</title><body style="font-family:system-ui;background:#0c2a23;color:#f3ead7;display:grid;place-items:center;min-height:100vh;margin:0;text-align:center"><p>This invitation link is not valid.<br>Please use the personal link sent to you.</p>'
+));
 
 app.get('/i/:token', (req, res) => {
   const g = db.guests.find(x => x.token === req.params.token);

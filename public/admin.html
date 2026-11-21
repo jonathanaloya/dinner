@@ -79,7 +79,7 @@ let me = '', guests = [];
 async function api(method, url, body) {
   const r = await fetch(url, { method, headers: body ? { 'Content-Type': 'application/json' } : (method === 'GET' ? {} : { 'Content-Type': 'application/json' }), body: body ? JSON.stringify(body) : (method === 'GET' ? undefined : '{}') });
   const d = await r.json().catch(() => ({}));
-  if (!r.ok) { const e = new Error(d.error || 'Something went wrong'); e.status = r.status; throw e; }
+  if (!r.ok) { const e = new Error(d.error || `Request failed (HTTP ${r.status}). Check the server logs if this continues.`); e.status = r.status; throw e; }
   return d;
 }
 let tt; function toast(m){const t=$('toast');t.textContent=m;t.classList.add('on');clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('on'),1800)}
