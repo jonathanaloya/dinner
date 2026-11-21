@@ -163,9 +163,14 @@ app.delete('/api/admins/:username', needAdmin, (req, res) => {
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const readEvent = () => JSON.parse(fs.readFileSync(path.join(__dirname, 'event.json'), 'utf8'));
 const template = () => fs.readFileSync(path.join(__dirname, 'views', 'invite.html'), 'utf8');
+const renderInvite = name => {
+  const ev = readEvent();
+  const vars = { NAME: name, TITLE: ev.title, DAYNAME: ev.dayName, DAY: ev.day, MONTHYEAR: ev.monthYear, TIME: ev.time, VENUE: ev.venue, DRESS: ev.dress, BASE_URL };
+  return template().replace(/\{\{(\w+)\}\}/g, (_, k) => esc(vars[k] ?? ''));
+};
 
 app.get('/admin', (req, res) => res.set('Cache-Control', 'no-store').sendFile(path.join(__dirname, 'public', 'admin.html')));
-app.get('/', (req, res) => res.type('html').send('<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Invitation</title><body style="font-family:system-ui;background:#0c2a23;color:#f3ead7;display:grid;place-items:center;min-height:100vh;margin:0;text-align:center"><p>This is a private invitation.<br>Please open the personal link you were sent.</p>'));
+app.get('/', (req, res) => res.set('Cache-Control', 'no-store').type('html').send(renderInvite('Friend')));
 
 app.get('/i/:token', (req, res) => {
   const g = db.guests.find(x => x.token === req.params.token);
@@ -173,10 +178,7 @@ app.get('/i/:token', (req, res) => {
   if (!/bot|crawl|spider|whatsapp|facebookexternalhit|telegram|preview|slack/i.test(req.headers['user-agent'] || '')) {
     g.opens = (g.opens || 0) + 1; g.lastOpened = new Date().toISOString(); save();
   }
-  const ev = readEvent();
-  const vars = { NAME: g.name, TITLE: ev.title, DAYNAME: ev.dayName, DAY: ev.day, MONTHYEAR: ev.monthYear, TIME: ev.time, VENUE: ev.venue, DRESS: ev.dress, BASE_URL };
-  const html = template().replace(/\{\{(\w+)\}\}/g, (_, k) => esc(vars[k] ?? ''));
-  res.set('Cache-Control', 'no-store').type('html').send(html);
+  res.set('Cache-Control', 'no-store').type('html').send(renderInvite(g.name));
 });
 
 app.listen(PORT, () => console.log(`Invitation site running at ${BASE_URL} (port ${PORT}). Admin panel: ${BASE_URL}/admin`));
