@@ -259,7 +259,13 @@ function needAdmin(req, res, next) {
     }).catch(next);
   });
 }
-const linkFor = g => `${BASE_URL}/i/${g.token}`;
+const slugFor = name => String(name || '')
+  .normalize('NFKD')
+  .replace(/[^a-z0-9]+/gi, '-')
+  .replace(/^-+|-+$/g, '')
+  .toLowerCase()
+  .slice(0, 40) || 'guest';
+const linkFor = g => `${BASE_URL}/i/${slugFor(g.name)}/${g.token}`;
 const publicGuest = g => ({ id: g.id, name: g.name, link: linkFor(g), created: g.created, opens: g.opens || 0, lastOpened: g.lastOpened || null });
 
 app.get('/api/me', needAdmin, (req, res) => res.json({ username: req.admin }));
@@ -311,14 +317,17 @@ app.get('/', (req, res) => res.status(404).set('Cache-Control', 'no-store').type
   '<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Not found</title><body style="font-family:system-ui;background:#0c2a23;color:#f3ead7;display:grid;place-items:center;min-height:100vh;margin:0;text-align:center"><p>This invitation link is not valid.<br>Please use the personal link sent to you.</p>'
 ));
 
-app.get('/i/:token', withStorage, asyncHandler(async (req, res) => {
+const openInvite = async (req, res) => {
   const g = await findGuestByToken(req.params.token);
   if (!g) return res.status(404).type('html').send('<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Not found</title><body style="font-family:system-ui;background:#0c2a23;color:#f3ead7;display:grid;place-items:center;min-height:100vh;margin:0;text-align:center"><p>This invitation link is not valid.<br>Please ask the host for a new one.</p>');
   if (!/bot|crawl|spider|whatsapp|facebookexternalhit|telegram|preview|slack/i.test(req.headers['user-agent'] || '')) {
     await recordGuestOpen(g);
   }
   res.set('Cache-Control', 'no-store').type('html').send(renderInvite(g.name));
-}));
+};
+
+app.get('/i/:name/:token', withStorage, asyncHandler(openInvite));
+app.get('/i/:token', withStorage, asyncHandler(openInvite));
 
 app.use((error, req, res, next) => {
   if (res.headersSent) return next(error);
