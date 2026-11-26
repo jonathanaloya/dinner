@@ -313,6 +313,7 @@ const renderInvite = name => {
 };
 
 app.get('/admin', (req, res) => res.set('Cache-Control', 'no-store').sendFile(path.join(__dirname, 'public', 'admin.html')));
+app.get('/programme-flow', (req, res) => res.set('Cache-Control', 'no-store').sendFile(path.join(__dirname, 'programme-flow-v2.html')));
 app.get('/', (req, res) => res.status(404).set('Cache-Control', 'no-store').type('html').send(
   '<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Not found</title><body style="font-family:system-ui;background:#0c2a23;color:#f3ead7;display:grid;place-items:center;min-height:100vh;margin:0;text-align:center"><p>This invitation link is not valid.<br>Please use the personal link sent to you.</p>'
 ));
